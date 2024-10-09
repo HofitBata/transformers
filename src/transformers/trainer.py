@@ -1971,7 +1971,7 @@ class Trainer:
             if self.place_model_on_device:
                 self._move_model_to_device(self.model, args.device)
             self.model_wrapped = self.model
-
+        print("Max_Memory_Allocated after model loading:", torch.cuda.max_memory_allocated() / (1024 * 1024 * 1024))
         inner_training_loop = find_executable_batch_size(
             self._inner_training_loop, self._train_batch_size, args.auto_find_batch_size
         )
@@ -1999,6 +1999,7 @@ class Trainer:
         self, batch_size=None, args=None, resume_from_checkpoint=None, trial=None, ignore_keys_for_eval=None
     ):
         self.accelerator.free_memory()
+        print("Max_Memory_Allocated after accelerator.free_memory:", torch.cuda.max_memory_allocated() / (1024 * 1024 * 1024))
         self._train_batch_size = batch_size
         if self.args.auto_find_batch_size:
             if self.state.train_batch_size != self._train_batch_size:
@@ -2136,7 +2137,9 @@ class Trainer:
             if use_accelerator_prepare:
                 self._fsdp_qlora_plugin_updates()
                 self.model = self.accelerator.prepare(self.model)
+            print("Max_Memory_Allocated before create_optimizer_and_scheduler:", torch.cuda.max_memory_allocated() / (1024 * 1024 * 1024))
             self.create_optimizer_and_scheduler(num_training_steps=max_steps)
+            print("Max_Memory_Allocated after create_optimizer_and_scheduler:", torch.cuda.max_memory_allocated() / (1024 * 1024 * 1024))
 
         # prepare using `accelerator` prepare
         if use_accelerator_prepare:
@@ -2329,8 +2332,11 @@ class Trainer:
                     self.control = self.callback_handler.on_step_begin(args, self.state, self.control)
 
                 with self.accelerator.accumulate(model):
+                    if step < 3:
+                        print(f"Max_Memory_Allocated before training_step {step}:", torch.cuda.max_memory_allocated() / (1024 * 1024 * 1024))
                     tr_loss_step = self.training_step(model, inputs)
-
+                    if step < 3:
+                        print(f"Max_Memory_Allocated after training_step {step}:", torch.cuda.max_memory_allocated() / (1024 * 1024 * 1024))
                 if (
                     args.logging_nan_inf_filter
                     and not is_torch_xla_available()
