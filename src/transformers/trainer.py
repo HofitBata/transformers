@@ -2126,7 +2126,9 @@ class Trainer:
 
             self.model.gradient_checkpointing_enable(gradient_checkpointing_kwargs=gradient_checkpointing_kwargs)
 
+        print("Max_Memory_Allocated before _wrap_model:", torch.cuda.max_memory_allocated() / (1024 * 1024 * 1024))
         model = self._wrap_model(self.model_wrapped)
+        print("Max_Memory_Allocated after _wrap_model:", torch.cuda.max_memory_allocated() / (1024 * 1024 * 1024))
 
         # as the model is wrapped, don't use `accelerator.prepare`
         # this is for unhandled cases such as
@@ -3452,7 +3454,9 @@ class Trainer:
             with amp.scale_loss(loss, self.optimizer) as scaled_loss:
                 scaled_loss.backward()
         else:
+            print("Max_Memory_Allocated before backward:", torch.cuda.max_memory_allocated() / (1024 * 1024 * 1024))
             self.accelerator.backward(loss, **kwargs)
+            print("Max_Memory_Allocated after backward:", torch.cuda.max_memory_allocated() / (1024 * 1024 * 1024))
 
         return loss.detach() / self.args.gradient_accumulation_steps
 
@@ -3466,7 +3470,9 @@ class Trainer:
             labels = inputs.pop("labels")
         else:
             labels = None
+        print("Max_Memory_Allocated before forward:", torch.cuda.max_memory_allocated() / (1024 * 1024 * 1024))
         outputs = model(**inputs)
+        print("Max_Memory_Allocated after forward:", torch.cuda.max_memory_allocated() / (1024 * 1024 * 1024))
         # Save past state if it exists
         # TODO: this needs to be fixed and made cleaner later.
         if self.args.past_index >= 0:
